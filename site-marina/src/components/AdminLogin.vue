@@ -43,30 +43,121 @@ export default {
       errorMessage: ''
     };
   },
-  methods: {
+    methods: {
     async login() {
+      
       if (!this.username || !this.password) {
         this.errorMessage = 'Пожалуйста, заполните все поля';
         return;
       }
 
+      
+      if (this.username.length < 3 || this.username.length > 50) {
+        this.errorMessage = 'Логин должен содержать от 3 до 50 символов';
+        return;
+      }
+      if (this.password.length < 8) {
+        this.errorMessage = 'Пароль должен содержать минимум 8 символов';
+        return;
+      }
+      
+      const usernameRegex = /^[a-zA-Z0-9_]+$/;
+      if (!usernameRegex.test(this.username)) {
+        this.errorMessage = 'Логин содержит недопустимые символы';
+        return;
+      }
+
+      
       this.loading = true;
       this.errorMessage = '';
 
       try {
-        // Отправляем запрос на бэкенд
-        const response = await axios.get('http://localhost:3000/auth');
-        if (this.username === response.data.username && this.password === response.data.password) {
-        localStorage.setItem('authToken', response.data.token);
-        this.$router.push('/admin');
+        
+        const response = await axios.post(
+          'https://api.example.com/auth', 
+          {
+            username: this.username,
+            password: this.password
+          },
+          {
+            timeout: 10000, 
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest' 
+            }
+          }
+        );
+
+        
+        if (!response.data || typeof response.data !== 'object') {
+          throw new Error('Некорректный формат ответа сервера');
+        }
+
+        
+        if (response.data.success && response.data.token) {
+          
+          localStorage.setItem('authToken', response.data.token);
+
+          
+          this.username = '';
+          this.password = '';
+
+          
+          await this.$router.push('/admin');
         } else {
-        this.errorMessage = 'Неверный логин или пароль';
+          
+          this.errorMessage = response.data.message || 'Ошибка аутентификации: токен не получен';
         }
       } catch (error) {
-        this.errorMessage = 'Ошибка при входе. Проверьте логин и пароль.';
-        console.error('Login error:', error);
+        
+        if (error.response) {
+          
+          const status = error.response.status;
+          const message = error.response.data?.message || 'Произошла ошибка на сервере';
+
+          switch (status) {
+            case 400:
+              this.errorMessage = 'Некорректный запрос. Проверьте данные и попробуйте снова';
+              break;
+            case 401:
+              this.errorMessage = 'Неверный логин или пароль';
+              break;
+            case 403:
+              this.errorMessage = 'Доступ запрещен';
+              break;
+            case 429:
+              this.errorMessage = 'Слишком много попыток. Пожалуйста, подождите 5 минут';
+              break;
+            case 500:
+              this.errorMessage = 'Внутренняя ошибка сервера. Попробуйте позже';
+              break;
+            default:
+              this.errorMessage = message;
+          }
+        } else if (error.request) {
+          
+          this.errorMessage = 'Сервер недоступен. Проверьте подключение к интернету';
+        } else if (error.code === 'ECONNABORTED') {
+          
+          this.errorMessage = 'Время ожидания истекло. Попробуйте снова';
+        } else {
+          
+          this.errorMessage = 'Произошла неизвестная ошибка. Пожалуйста, попробуйте снова';
+        }
+
+        // Логирование ошибки для отладки
+        console.error('Ошибка входа:', {
+          message: error.message,
+          code: error.code,
+          response: error.response ? {
+            status: error.response.status,
+            data: error.response.data
+          } : null
+        });
       } finally {
+        // Сброс состояния загрузки и поля пароля
         this.loading = false;
+        this.password = ''; // Сбрасываем пароль для безопасности
       }
     }
   }
