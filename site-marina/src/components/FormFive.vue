@@ -61,17 +61,27 @@ export default {
     };
   },
   methods: {
+    
+    sanitizeInput(input) {
+      const div = document.createElement('div');
+      div.textContent = input;
+      return div.innerHTML;
+    },
     validateForm() {
       this.errors = { name: '', phone: '', email: '' };
       let isValid = true;
 
-      // Валидация имени
+      
+      const nameRegex = /^[a-zA-Zа-яА-Я\s-]{2,50}$/;
       if (!this.form.name.trim()) {
         this.errors.name = 'Введите имя';
         isValid = false;
+      } else if (!nameRegex.test(this.form.name.trim())) {
+        this.errors.name = 'Имя должно содержать 2–50 букв, пробелов или дефисов';
+        isValid = false;
       }
 
-      // Валидация телефона (простой пример)
+      
       const phoneRegex = /^\+?\d{10,15}$/;
       if (!this.form.phone.trim()) {
         this.errors.phone = 'Введите номер телефона';
@@ -81,7 +91,7 @@ export default {
         isValid = false;
       }
 
-      // Валидация email
+      
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!this.form.email.trim()) {
         this.errors.email = 'Введите email';
@@ -98,13 +108,20 @@ export default {
 
       this.isSubmitting = true;
 
+      
+      const sanitizedForm = {
+        name: this.sanitizeInput(this.form.name.trim()),
+        phone: this.sanitizeInput(this.form.phone.trim()),
+        email: this.sanitizeInput(this.form.email.trim())
+      };
+
       try {
         const response = await fetch('https://your-backend-api.com/submit', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(this.form)
+          body: JSON.stringify(sanitizedForm)
         });
 
         if (!response.ok) {
@@ -112,9 +129,7 @@ export default {
         }
 
         const result = await response.json();
-
-        
-        console.log('Ответ сервера:', result); // Использование result
+        console.log('Ответ сервера:', result);
         alert('Заявка успешно отправлена!');
         // Сброс формы
         this.form = { name: '', phone: '', email: '' };
