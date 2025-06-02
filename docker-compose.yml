@@ -1,21 +1,4 @@
 services:
-  backend:
-    build: ./backend
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./backend/src:/app/src
-    environment:
-      - DATABASE_URL=postgresql://root:root@db:5432/postgres_db
-    depends_on:
-      - postgres
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "8000:80"
-    depends_on:
-      - backend
 
   postgres:
     image: postgres:latest
@@ -26,7 +9,7 @@ services:
       POSTGRES_DB: postgres_db
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data/pgdata
     deploy:
@@ -62,6 +45,37 @@ services:
       PGADMIN_DEFAULT_PASSWORD: root
     ports:
       - "5050:80"
+      
+  backend:
+    build: ./backend
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./backend/src:/app/src
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://root:root@postgres:5432/postgres_db
+    depends_on:
+      - postgres
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8000:80"
+    depends_on:
+      - backend
+
+    
+  nginx:
+    image: nginx:latest
+    container_name: nginx_belkin
+    ports:
+      - "9090:80"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+      - frontend
 
 volumes:
   pgdata:
