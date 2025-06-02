@@ -74,9 +74,9 @@ export default {
       try {
         
         const response = await axios.post(
-          ' http://localhost:9000/⁠', 
+          "http://localhost:9000/user/", 
           {
-            username: this.username,
+            login: this.username,
             password: this.password
           },
           {
@@ -93,8 +93,8 @@ export default {
           throw new Error('Некорректный формат ответа сервера');
         }
 
-        
-        if (response.data.success && response.data.token) {
+        console.log(response.data.token);
+        if (response.data.token) {
           
           localStorage.setItem('authToken', response.data.token);
 
